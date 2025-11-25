@@ -18,7 +18,7 @@ from ...schemas.user import UserCreate, UserCreateInternal, UserRead, UserTierUp
 router = APIRouter(tags=["users"])
 
 
-if settings.ENABLE_PASSWORD_AUTH:
+if settings.ENABLE_PASSWORD_AUTH:  # If password auth is not enable there should be no way to create users via the API
 
     @router.post("/user", response_model=UserRead, status_code=201)
     async def write_user(
@@ -37,14 +37,13 @@ async def write_user_internal(user: UserCreate | UserCreateInternal, db: AsyncSe
     if username_row:
         raise DuplicateValueException("Username not available")
 
-    user_internal_dict = user.model_dump()
     if isinstance(user, UserCreate):
+        user_internal_dict = user.model_dump()
         user_internal_dict["hashed_password"] = get_password_hash(password=user_internal_dict["password"])
         del user_internal_dict["password"]
+        user = UserCreateInternal(**user_internal_dict)
 
-    user_internal = UserCreateInternal(**user_internal_dict)
-    created_user = await crud_users.create(db=db, object=user_internal, schema_to_select=UserRead)
-
+    created_user = await crud_users.create(db=db, object=user, schema_to_select=UserRead)
     if created_user is None:
         raise NotFoundException("Failed to create user")
 
