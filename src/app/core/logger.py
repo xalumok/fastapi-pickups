@@ -21,7 +21,7 @@ def drop_color_message_key(_, __, event_dict: EventDict) -> EventDict:
     return event_dict
 
 
-def log_filter_processors(_, __, event_dict: EventDict) -> EventDict:
+def file_log_filter_processors(_, __, event_dict: EventDict) -> EventDict:
     """Filter out the request ID, path, method, client host, and status code from the event dict if the
     corresponding setting is False."""
 
@@ -102,7 +102,9 @@ file_handler = RotatingFileHandler(
 )
 file_handler.setLevel(settings.FILE_LOG_LEVEL)
 file_handler.setFormatter(
-    build_formatter(json_output=settings.FILE_LOG_FORMAT_JSON, pre_chain=SHARED_PROCESSORS + [log_filter_processors])
+    build_formatter(
+        json_output=settings.FILE_LOG_FORMAT_JSON, pre_chain=SHARED_PROCESSORS + [file_log_filter_processors]
+    )
 )
 
 # Console handler configuration
