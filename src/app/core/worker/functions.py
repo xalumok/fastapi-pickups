@@ -1,12 +1,11 @@
 import asyncio
 import logging
 
+import structlog
 import uvloop
 from arq.worker import Worker
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 
 # -------- background tasks --------
@@ -22,3 +21,13 @@ async def startup(ctx: Worker) -> None:
 
 async def shutdown(ctx: Worker) -> None:
     logging.info("Worker end")
+
+
+async def on_job_start(ctx: Worker) -> None:
+    structlog.contextvars.bind_contextvars(job_id=ctx["job_id"])
+    logging.info("Job Started")
+
+
+async def on_job_end(ctx: Worker) -> None:
+    logging.info("Job Competed")
+    structlog.contextvars.clear_contextvars()
