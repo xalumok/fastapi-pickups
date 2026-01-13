@@ -93,11 +93,6 @@ class BaseOAuthProvider(ABC):
         return {"access_token": access_token, "token_type": "bearer"}
 
     async def _get_user_details(self, oauth_user: OpenID) -> UserCreateInternal:
-        """Get user details from the OAuth provider response.
-
-        The exact details exposed by the OpenID class can be found here:
-        https://github.com/tomasvotava/fastapi-sso/blob/master/fastapi_sso/sso/base.py#L64
-        """
         if not oauth_user.email:
             raise UnauthorizedException(f"Invalid response from {self.provider_name.title()} OAuth.")
         username = oauth_user.email.split("@")[0]
