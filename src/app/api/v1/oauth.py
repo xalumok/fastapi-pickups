@@ -2,7 +2,8 @@ import logging
 from abc import ABC
 from typing import Any
 
-from fastapi import APIRouter, Depends, RedirectResponse, Request, Response
+from fastapi import APIRouter, Depends, Request, Response
+from fastapi.responses import RedirectResponse
 from fastapi_sso.sso.base import OpenID, SSOBase
 from fastapi_sso.sso.github import GithubSSO
 from fastapi_sso.sso.google import GoogleSSO
@@ -100,6 +101,7 @@ class BaseOAuthProvider(ABC):
         if not oauth_user.email:
             raise UnauthorizedException(f"Invalid response from {self.provider_name.title()} OAuth.")
         username = oauth_user.email.split("@")[0]
+        username = "".join(c for c in username.lower() if c.isalnum())
         name = oauth_user.display_name or username
 
         return UserCreateInternal(

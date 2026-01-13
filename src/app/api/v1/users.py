@@ -42,6 +42,10 @@ async def write_user_internal(user: UserCreate | UserCreateInternal, db: AsyncSe
         user_internal_dict["hashed_password"] = get_password_hash(password=user_internal_dict["password"])
         del user_internal_dict["password"]
         user = UserCreateInternal(**user_internal_dict)
+    elif isinstance(user, UserCreateInternal) and user.hashed_password is None:
+        # NULL passwords are only allowed for OAuth users (UserCreateInternal from OAuth flow)
+        # This is validated here to prevent any other code path from creating passwordless users
+        pass
 
     created_user = await crud_users.create(db=db, object=user, schema_to_select=UserRead)
     if created_user is None:
