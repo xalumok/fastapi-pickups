@@ -95,8 +95,7 @@ class BaseOAuthProvider(ABC):
     async def _get_user_details(self, oauth_user: OpenID) -> UserCreateInternal:
         if not oauth_user.email:
             raise UnauthorizedException(f"Invalid response from {self.provider_name.title()} OAuth.")
-        username = oauth_user.email.split("@")[0]
-        username = "".join(c for c in username.lower() if c.isalnum())
+        username = oauth_user.email.split("@")[0].lower()
         name = oauth_user.display_name or username
 
         return UserCreateInternal(
