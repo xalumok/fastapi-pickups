@@ -1,9 +1,7 @@
 import os
-import warnings
 from enum import Enum
-from typing import Self
 
-from pydantic import SecretStr, computed_field, field_validator, model_validator
+from pydantic import SecretStr, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,20 +9,9 @@ class AppSettings(BaseSettings):
     APP_NAME: str = "FastAPI app"
     APP_DESCRIPTION: str | None = None
     APP_VERSION: str | None = None
-    APP_BACKEND_HOST: str = "http://localhost:8000"
-    APP_FRONTEND_HOST: str | None = None
     LICENSE_NAME: str | None = None
     CONTACT_NAME: str | None = None
     CONTACT_EMAIL: str | None = None
-
-    @field_validator("APP_BACKEND_HOST", "APP_FRONTEND_HOST", mode="after")
-    @classmethod
-    def validate_hosts(cls, host: str) -> str:
-        if host is not None and not (host.startswith("http://") or host.startswith("https://")):
-            raise ValueError(
-                f"HOSTS must define their protocol and start with http:// or https://. Received the host '{host}'."
-            )
-        return host
 
 
 class CryptSettings(BaseSettings):
@@ -38,13 +25,39 @@ class DatabaseSettings(BaseSettings):
     pass
 
 
+class SQLiteSettings(DatabaseSettings):
+    SQLITE_URI: str = "./sql_app.db"
+    SQLITE_SYNC_PREFIX: str = "sqlite:///"
+    SQLITE_ASYNC_PREFIX: str = "sqlite+aiosqlite:///"
+
+
+class MySQLSettings(DatabaseSettings):
+    MYSQL_USER: str = "username"
+    MYSQL_PASSWORD: str = "password"
+    MYSQL_SERVER: str = "localhost"
+    MYSQL_PORT: int = 5432
+    MYSQL_DB: str = "dbname"
+    MYSQL_SYNC_PREFIX: str = "mysql://"
+    MYSQL_ASYNC_PREFIX: str = "mysql+aiomysql://"
+    MYSQL_URL: str | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def MYSQL_URI(self) -> str:
+        credentials = f"{self.MYSQL_USER}:{self.MYSQL_PASSWORD}"
+        location = f"{self.MYSQL_SERVER}:{self.MYSQL_PORT}/{self.MYSQL_DB}"
+        return f"{credentials}@{location}"
+
+
 class PostgresSettings(DatabaseSettings):
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "postgres"
+    POSTGRES_SYNC_PREFIX: str = "postgresql://"
     POSTGRES_ASYNC_PREFIX: str = "postgresql+asyncpg://"
+    POSTGRES_URL: str | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -52,11 +65,6 @@ class PostgresSettings(DatabaseSettings):
         credentials = f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
         location = f"{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         return f"{credentials}@{location}"
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def POSTGRES_URL(self) -> str:
-        return f"{self.POSTGRES_ASYNC_PREFIX}{self.POSTGRES_URI}"
 
 
 class FirstUserSettings(BaseSettings):
@@ -141,19 +149,9 @@ class CORSSettings(BaseSettings):
     CORS_HEADERS: list[str] = ["*"]
 
 
-class AuthSettings(BaseSettings):
-    ENABLE_PASSWORD_AUTH: bool = True
-    GOOGLE_CLIENT_ID: str | None = None
-    GOOGLE_CLIENT_SECRET: str | None = None
-    MICROSOFT_CLIENT_ID: str | None = None
-    MICROSOFT_CLIENT_SECRET: str | None = None
-    MICROSOFT_TENANT: str | None = None
-    GITHUB_CLIENT_ID: str | None = None
-    GITHUB_CLIENT_SECRET: str | None = None
-
-
 class Settings(
     AppSettings,
+    SQLiteSettings,
     PostgresSettings,
     CryptSettings,
     FirstUserSettings,
@@ -166,7 +164,6 @@ class Settings(
     CRUDAdminSettings,
     EnvironmentSettings,
     CORSSettings,
-    AuthSettings,
 ):
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", ".env"),
@@ -174,31 +171,6 @@ class Settings(
         case_sensitive=True,
         extra="ignore",
     )
-
-    @model_validator(mode="after")
-    def validate_environment_settings(self) -> Self:
-        "The validation should not modify any of the settings. It should provide"
-        "feedback to the user if any misconfiguration is detected."
-        if self.ENVIRONMENT == EnvironmentOption.LOCAL:
-            pass
-        elif self.ENVIRONMENT == EnvironmentOption.STAGING:
-            if "*" in self.CORS_ORIGINS:
-                warnings.warn(
-                    "For security, in a staging environment CORS_ORIGINS should not include '*'. "
-                    "It's recommended to specify explicit origins (e.g., ['https://staging.example.com'])."
-                )
-        elif self.ENVIRONMENT == EnvironmentOption.PRODUCTION:
-            if "*" in self.CORS_ORIGINS:
-                raise ValueError(
-                    "For security, in a production environment CORS_ORIGINS cannot include '*'. "
-                    "You must specify explicit allowed origins (e.g., ['https://example.com', 'https://www.example.com'])."
-                )
-            if self.APP_FRONTEND_HOST and not self.APP_FRONTEND_HOST.startswith("https://"):
-                raise ValueError(
-                    "In production, APP_FRONTEND_HOST must start with the https:// protocol. "
-                    f"Received the host '{self.APP_FRONTEND_HOST}'."
-                )
-        return self
 
 
 settings = Settings()

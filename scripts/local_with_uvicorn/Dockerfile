@@ -33,9 +33,6 @@ COPY --from=builder --chown=app:app /app/.venv /app/.venv
 # Ensure the virtual environment is in the PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Force file watching to use polling, which is more reliable in some Docker environments (like WSL/macOS)
-ENV WATCHFILES_FORCE_POLLING=true
-
 # Switch to the non-root user
 USER app
 
@@ -43,5 +40,5 @@ USER app
 WORKDIR /code
 
 # -------- replace with comment to run with gunicorn --------
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-include", ".env"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 # CMD ["gunicorn", "app.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000"]
