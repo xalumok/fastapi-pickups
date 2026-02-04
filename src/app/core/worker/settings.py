@@ -8,14 +8,14 @@ from arq.worker import check_health, run_worker
 
 from ...core.config import settings
 from ...core.logger import logging  # noqa: F401
-from .functions import on_job_end, on_job_start, sample_background_task, shutdown, startup
+from .functions import on_job_end, on_job_start, sample_background_task, send_pickup_notification, shutdown, startup
 
 REDIS_QUEUE_HOST = settings.REDIS_QUEUE_HOST
 REDIS_QUEUE_PORT = settings.REDIS_QUEUE_PORT
 
 
 class WorkerSettings:
-    functions = [sample_background_task]
+    functions = [sample_background_task, send_pickup_notification]
     redis_settings = RedisSettings(host=REDIS_QUEUE_HOST, port=REDIS_QUEUE_PORT)
     on_startup = startup
     on_shutdown = shutdown
